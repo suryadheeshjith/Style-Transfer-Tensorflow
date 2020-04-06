@@ -12,7 +12,7 @@
 * For Content we use 'block5_conv2' layer and for Style, we use 'block1_conv1','block2_conv1','block3_conv1', 'block4_conv1', 'block5_conv1'.
 * Adam optimiser for Gradient Descent.
 
-For more information on how style transfer works along with the code, check out my blog [here]()
+For more information on how style transfer works along with the code, check out my blog [here](https://suryadheeshjith.github.io/deep%20learning/neural%20networks/Style-Transfer-in-Tensorflow/)
 
 
 
