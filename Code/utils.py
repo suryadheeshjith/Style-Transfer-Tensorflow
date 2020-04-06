@@ -1,47 +1,79 @@
-import numpy as np
+import PIL.Image
 import tensorflow as tf
-from scipy.misc import imread, imresize
+import numpy as np
+from loss import style_loss,content_loss,total_variation_loss
+import time
 
-SQUEEZENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-SQUEEZENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-def load_image(filename, size=None):
+def tensor_to_image(tensor):
+    tensor = tensor*255
+    tensor = np.array(tensor, dtype=np.uint8)
+    if np.ndim(tensor)>3:
+        assert tensor.shape[0] == 1
+        tensor = tensor[0]
+    return PIL.Image.fromarray(tensor)
 
-    img = imread(filename)
-    if size is not None:
-        orig_shape = np.array(img.shape[:2])
-        min_idx = np.argmin(orig_shape)
-        scale_factor = float(size) / orig_shape[min_idx]
-        new_shape = (orig_shape * scale_factor).astype(int)
-        img = imresize(img, scale_factor)
+def load_img(path_to_img):
+    max_dim = 512
+    img = tf.io.read_file(path_to_img)
+    img = tf.image.decode_image(img, channels=3)
+    img = tf.image.convert_image_dtype(img, tf.float32)
+
+    shape = tf.cast(tf.shape(img)[:-1], tf.float32) # Casts a tensor to a new type.
+    long_dim = max(shape)
+    scale = max_dim / long_dim
+
+    new_shape = tf.cast(shape * scale, tf.int32)
+
+    img = tf.image.resize(img, new_shape)
+    img = img[tf.newaxis, :] # Adding a new axis because input must be 4-dimensional[405,512,3] [Op:Conv2D]
     return img
 
 
-def preprocess_image(img):
+def imshow(image, title=None):
+    if len(image.shape) > 3:
+        image = tf.squeeze(image, axis=0) # Given a tensor input, this operation returns a tensor of the same type with all dimensions of size 1 removed
 
-    return (img.astype(np.float32)/255.0 - SQUEEZENET_MEAN) / SQUEEZENET_STD
+    plt.imshow(image)
+    if title:
+        plt.title(title)
 
-def deprocess_image(img, rescale=False):
-    """Undo preprocessing on an image and convert back to uint8."""
-    img = (img * SQUEEZENET_STD + SQUEEZENET_MEAN)
-    if rescale:
-        vmin, vmax = img.min(), img.max()
-        img = (img - vmin) / (vmax - vmin)
-    return np.clip(255 * img, 0.0, 255.0).astype(np.uint8)
+def clip_0_1(image):
+    return tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
 
-def extract_features(x, cnn):
-    features = []
-    prev_feat = x
-    for i, layer in enumerate(cnn.net.layers[:-2]):
-        next_feat = layer(prev_feat)
-        features.append(next_feat)
-        prev_feat = next_feat
-    return features
 
-def gram_matrix(features, normalize=True):
-    _, H, W, C = features.shape
-    features = tf.reshape(features, (-1, C))
-    g_matrix = tf.linalg.matmul(tf.transpose(features), features)
-    if normalize:
-        g_matrix /= (H*W*C)
-    return g_matrix
+def train(model,content_image,style_image,style_weight,content_weight,total_variation_weight,opt,epochs,steps_per_epoch):
+
+    # Assign current_image to the content image
+    current_image = tf.Variable(content_image)
+
+
+    # Targets
+    style_targets = model(style_image)['style']
+    content_targets = model(content_image)['content']
+
+    # Gradient Descent
+    start = time.time()
+    step = 0
+    for n in range(epochs):
+        for m in range(steps_per_epoch):
+            step += 1
+            with tf.GradientTape() as tape:
+                outputs = model(current_image)
+                style_outputs = outputs['style']
+                content_outputs = outputs['content']
+                loss = style_loss(style_outputs,style_targets,style_weight)
+                loss += content_loss(content_outputs,content_targets,content_weight)
+                loss += total_variation_loss(current_image, total_variation_weight)
+
+            grad = tape.gradient(loss, current_image)
+            opt.apply_gradients([(grad, current_image)])
+            current_image.assign(clip_0_1(current_image))
+            print(".", end='')
+
+        print("Train step: {}".format(step))
+
+    end = time.time()
+    print("Total time: {:.1f}".format(end-start))
+
+    return current_image

@@ -1,125 +1,88 @@
-import os
-import numpy as np
-from scipy.misc import imread, imresize
-import matplotlib
-#matplotlib.use('TkAgg') # Require matplotlib output
-matplotlib.use('PS') # No matplotlib output
-import matplotlib.pyplot as plt
 import tensorflow as tf
-
-
-from utils import load_image, preprocess_image, deprocess_image, extract_features, gram_matrix
-from loss import content_loss,style_loss,tv_loss
-from SqueezeNet import SqueezeNet
+import argparse
+from utils import load_img,train,tensor_to_image
+from Style_class import StyleContentModel
 
 
 
-def style_transfer(content_image, style_image, image_size, style_size, content_layer, content_weight,
-                   style_layers, style_weights, tv_weight, model, path, init_random = False):
+def parse_args():
 
-    # Extract features from the content image
-    content_img = preprocess_image(load_image(content_image, size=image_size))
-    feats = extract_features(content_img[None], model)
-    content_target = feats[content_layer]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-cp',"--content_path",dest="content_path", default='../Data/Content/waves.jpg', help="Content file path. Default='../Data/Content/waves.jpg'")
+    parser.add_argument('-sp',"--style_path",dest="style_path", default='../Data/Styles/wave.jpg', help="Style file path. Default='../Data/Styles/wave.jpg'")
+    parser.add_argument('-op',"--output_path",dest="output_path", default='../Data/Output/1.jpg', help="Output file path. Default='../Data/Content/1.jpg'")
+    parser.add_argument('-cpl',"--content_path_layer",dest="content_path_layer", default='../Data/Layers/content.txt', help="Content text file with layer name. Default='../Data/Layers/content.txt'")
+    parser.add_argument('-spl',"--style_path_layers",dest="style_path_layers", default='../Data/Layers/style.txt', help="Style text file with layer names. Default='../Data/Layers/style.txt'")
+    parser.add_argument('-sw',"--style_weight", dest="style_weight", type=float, default=1e-2, help="Style weights. Default=1e-2")
+    parser.add_argument('-cw',"--content_weight", dest="content_weight", type=float, default=1e4, help="Content weights. Default=1e4")
+    parser.add_argument('-tw',"--total_variation_weight", dest="total_variation_weight", type=int, default=30, help="Total Variation weight. Default=30")
+    parser.add_argument('-lr',"--learning_rate", dest="learning_rate", type=float, default=0.02, help="Learning Rate in Adam. Default=0.02")
+    parser.add_argument('-b',"--beta1", dest="beta_1", type=float, default=0.99, help="Beta in Adam. Default=0.99")
+    parser.add_argument('-e',"--epochs", dest="epochs", type=int, default=10, help="Epochs. Default=10")
+    parser.add_argument('-spe',"--steps_per_epoch", dest="steps_per_epoch", type=int, default=100, help="Steps per epoch. Default=100")
 
-    # Extract features from the style image
-    style_img = preprocess_image(load_image(style_image, size=style_size))
-    s_feats = extract_features(style_img[None], model)
-    style_targets = []
-    # Compute list of TensorFlow Gram matrices
-    for idx in style_layers:
-        style_targets.append(gram_matrix(s_feats[idx]))
 
-    # Set up optimization hyperparameters
-    initial_lr = 3.0
-    decayed_lr = 0.1
-    decay_lr_at = 180
-    max_iter = 400
-
-    step = tf.Variable(0, trainable=False)
-    boundaries = [decay_lr_at]
-    values = [initial_lr, decayed_lr]
-    learning_rate_fn = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
-
-    # Later, whenever we perform an optimization step, we pass in the step.
-    learning_rate = learning_rate_fn(step)
-
-    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-
-    # Initialize the generated image and optimization variables
-
-    f, axarr = plt.subplots(1,2)
-    axarr[0].axis('off')
-    axarr[1].axis('off')
-    axarr[0].set_title('Content Source Img.')
-    axarr[1].set_title('Style Source Img.')
-    axarr[0].imshow(deprocess_image(content_img))
-    axarr[1].imshow(deprocess_image(style_img))
-    plt.show()
-    plt.figure()
-
-    # Initialize generated image to content image
-    if init_random:
-        initializer = tf.random_uniform_initializer(0, 1)
-        img = initializer(shape=content_img[None].shape)
-        img_var = tf.Variable(img)
-        print("Intializing randomly.")
-    else:
-        img_var = tf.Variable(content_img[None])
-        print("Initializing with content image.")
-
-    for t in range(max_iter):
-        with tf.GradientTape() as tape:
-            tape.watch(img_var)
-            feats = extract_features(img_var, model)
-            # Compute loss
-            c_loss = content_loss(content_weight, feats[content_layer], content_target)
-            s_loss = style_loss(feats, style_layers, style_targets, style_weights)
-            t_loss = tv_loss(img_var, tv_weight)
-            loss = c_loss + s_loss + t_loss
-        # Compute gradient
-        grad = tape.gradient(loss, img_var)
-        optimizer.apply_gradients([(grad, img_var)])
-
-        img_var.assign(tf.clip_by_value(img_var, -1.5, 1.5))
-
-        if t % 100 == 0:
-            print('Iteration {}'.format(t))
-            plt.imshow(deprocess_image(img_var[0].numpy(), rescale=True))
-            plt.axis('off')
-            plt.show()
-    print('Iteration {}'.format(t))
-    plt.imshow(deprocess_image(img_var[0].numpy(), rescale=True))
-    plt.savefig(path)
-    plt.axis('off')
-    plt.show()
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == "__main__":
 
-    squeezenet=SqueezeNet()
-    squeezenet.load_weights('../weights/squeezenet.ckpt')
-    squeezenet.trainable=False
 
-    path_to_out = '../Data/Output/saved9.png'
+    #Defaults
+    content_layers_default = ['block5_conv2']
+    style_layers_default = ['block1_conv1','block2_conv1','block3_conv1','block4_conv1','block5_conv1']
+
+    # Argument Parsing
+    args = parse_args()
+    print("\n\nArguments Used : "+str(args)+"\n\n\n")
+    content_path = args.content_path
+    style_path =  args.style_path
+    output_path = args.output_path
+    c_layers_path = args.content_path_layer
+    s_layers_path = args.style_path_layers
+    style_weight = args.style_weight
+    content_weight = args.content_weight
+    total_variation_weight = args.total_variation_weight
+    learning_rate = args.learning_rate
+    beta_1 = args.beta_1
+    epochs = args.epochs
+    steps_per_epoch = args.steps_per_epoch
 
 
-    params1 = {
-    'content_image' : '../Data/Content/mit.jpg',
-    #'style_image' : '../Data/Styles/composition_vii.jpg',
-    #'style_image' : '../Data/Styles/the_scream.jpg',
-    #'style_image' : '../Data/Styles/muse.jpg',
-    #'style_image' : '../Data/Styles/udnie.jpg',
-    'style_image' : '../Data/Styles/wave.jpg',
-    'image_size' : 192,
-    'style_size' : 224,
-    'content_layer' : 2,
-    'content_weight' : 3e-2,
-    'style_layers' : (0, 3, 5, 6),
-    'style_weights' : (20000, 500, 12, 1),
-    'tv_weight' : 5e-2,
-    'model' : squeezenet,
-    'path' : path_to_out
-}
 
-    style_transfer(**params1)
+    # Extract Images
+    content_image = load_img(content_path)
+    style_image = load_img(style_path)
+
+
+    # Extract layer names
+    content_layers = []
+    style_layers = []
+    try:
+        f1 = open(c_layers_path, "r")
+        for layer in f1:
+            layer = layer.rstrip()
+            content_layers.append(layer)
+
+    except:
+        content_layers = content_layers_default
+
+    try:
+        f2 = open(s_layers_path, "r")
+        for layer in f2:
+            layer = layer.rstrip()
+            style_layers.append(layer)
+    except:
+        style_layers = style_layers_default
+
+    # Optimizer
+    opt = tf.optimizers.Adam(learning_rate, beta_1, epsilon=0.1)
+
+    # Model
+    model = StyleContentModel(style_layers, content_layers)
+
+    # Train
+    output = train(model,content_image,style_image,style_weight,content_weight,total_variation_weight,opt,epochs,steps_per_epoch)
+
+    tensor_to_image(output).save(output_path)

@@ -1,5 +1,4 @@
 import tensorflow as tf
-from utils import gram_matrix
 import numpy as np
 
 """
@@ -7,26 +6,28 @@ Total loss = content_loss + style_loss + Total_variation_loss
 """
 
 
-def content_loss(content_weight, content_current, content_original):
 
-    loss = content_weight*tf.reduce_sum((content_current-content_original)**2)
-    return loss
+def style_loss(style_outputs,style_targets,style_weight):
 
 
+    num_style_layers = len(style_outputs.keys())
+    style_loss = tf.add_n([tf.reduce_mean((style_outputs[name]-style_targets[name])**2)
+                           for name in style_outputs.keys()])
+    style_loss *= style_weight / num_style_layers
+    return style_loss
 
-def style_loss(feats, style_layers, style_targets, style_weights):
+def content_loss(content_outputs,content_targets,content_weight):
 
-    i =0
-    loss = 0.0
-    for layer in style_layers:
-        g_matx = gram_matrix(feats[layer])
-        loss+= style_weights[i]*tf.math.reduce_sum((g_matx-style_targets[i])**2)
-        i+=1
-    return loss
+    num_content_layers = len(content_outputs.keys())
+    content_loss = tf.add_n([tf.reduce_mean((content_outputs[name]-content_targets[name])**2)
+                             for name in content_outputs.keys()])
+    content_loss *= content_weight/num_content_layers
+    return content_loss
 
-def tv_loss(img, tv_weight):
 
-    sum1 = (img[:, 1:, :, :]-img[:, :-1, :, :])
-    sum2 = (img[:, :, 1:, :]-img[:, :, :-1, :])
-    loss = tv_weight*(np.sum(np.power(sum1, 2))+np.sum(np.power(sum2, 2)))
+def total_variation_loss(image,total_variation_weight):
+    x_var = image[:,:,1:,:] - image[:,:,:-1,:]
+    y_var = image[:,1:,:,:] - image[:,:-1,:,:]
+    loss = tf.reduce_sum(tf.abs(x_var)) + tf.reduce_sum(tf.abs(y_var))
+    loss *= total_variation_weight
     return loss

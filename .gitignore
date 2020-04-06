@@ -1,2 +1,5 @@
 .DS_Store
-Data/Output_all
+Data/Hidden
+Code/Style Transfer.ipynb
+Code/__pycache__
+Code/.ipynb_checkpoints
