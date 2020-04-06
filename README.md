@@ -41,7 +41,7 @@ cd Code
 python3 main.py
 ```
 
-optional arguments:
+#### Optional arguments:
 
 ```
   CONTENT_PATH : -cp, --content_path : Content file path. Default='../Data/Content/waves.jpg'
