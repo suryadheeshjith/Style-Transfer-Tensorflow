@@ -67,3 +67,35 @@ optional arguments:
 
   STEPS_PER_EPOCH : -spe, --steps_per_epoch : Steps per epoch. Default=100
 ```
+
+Repository structure :
+
+```
+.
+├── Code
+│   ├── Style_class.py
+│   ├── loss.py
+│   ├── main.py
+│   └── utils.py
+├── Data
+│   ├── Content
+│   │   ├── me.jpg
+│   │   └── waves.jpg
+│   ├── Images
+│   │   ├── me_scream.png
+│   │   ├── me_starry.png
+│   │   └── waves_waves.png
+│   ├── Layers
+│   │   ├── content.txt
+│   │   └── style.txt
+│   ├── Output
+│   │   ├── me-stylised.jpg
+│   │   ├── me-stylised2.png
+│   │   └── waves.png
+│   ├── Styles
+│   │   ├── starry_night.jpg
+│   │   ├── the_scream.jpg
+│   │   └── wave.jpg
+│   └── requirements.txt
+└── README.md
+```
