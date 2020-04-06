@@ -1,8 +1,9 @@
 # Style-Transfer-Tensorflow
 
 
-<img src="Data/Images/me_scream.png" alt="Example2">
-<img src="Data/Output/me-stylised.jpg" alt="Example2">
+<img src="Data/Content/me.jpg" alt="Example1">
+<img src="Data/Styles/starry_night.jpg" alt="Example1">
+<img src="Data/Output/me-stylised.jpg" alt="Example1">
 
 
 ***Some information of the code*** :
