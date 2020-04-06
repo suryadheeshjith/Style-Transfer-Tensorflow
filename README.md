@@ -43,14 +43,26 @@ optional arguments:
 
 
   CONTENT_PATH : -cp, --content_path : Content file path. Default='../Data/Content/waves.jpg'
+
   STYLE_PATH : -sp, --style_path : Style file path. Default='../Data/Styles/wave.jpg'
+
   OUTPUT_PATH : -op, --output_path : Output file path. Default='../Data/Content/1.jpg'
+
   CONTENT_PATH_LAYER : -cpl, --content_path_layer : Content text file with layer name. Default='../Data/Layers/content.txt'
+
   STYLE_PATH_LAYERS : -spl, --style_path_layers : Style text file with layer names. Default='../Data/Layers/style.txt'
+
   STYLE_WEIGHT : -sw, --style_weight : Style weights. Default=1e-2
+
   CONTENT_WEIGHT : -cw, --content_weight : Content weights. Default=1e4
+
   TOTAL_VARIATION_WEIGHT : -tw, --total_variation_weight : Total Variation weight. Default=30
+
   LEARNING_RATE : -lr, --learning_rate : Learning Rate in Adam. Default=0.02
+
   BETA : -b BETA_1, --beta1 BETA_1 : Beta in Adam. Default=0.99
+
   EPOCH : -e EPOCHS, --epochs EPOCHS : Epochs. Default=10
+
   STEPS_PER_EPOCH : -spe, --steps_per_epoch : Steps per epoch. Default=100
+  
