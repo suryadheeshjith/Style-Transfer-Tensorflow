@@ -36,10 +36,10 @@ I am using Python version 3.7
 
 3. Train and save image!
 
-```
-cd Code
-python3 main.py
-```
+    ```
+    cd Code
+    python3 main.py
+    ```
 
 #### Optional arguments:
 
