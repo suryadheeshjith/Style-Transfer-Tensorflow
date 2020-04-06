@@ -33,7 +33,7 @@ I am using Python version 3.7
     ```
 
 
-3. Train and sample!
+3. Train and save image!
 
 ```
 cd Code
@@ -42,7 +42,7 @@ python3 main.py
 
 optional arguments:
 
-
+```
   CONTENT_PATH : -cp, --content_path : Content file path. Default='../Data/Content/waves.jpg'
 
   STYLE_PATH : -sp, --style_path : Style file path. Default='../Data/Styles/wave.jpg'
@@ -66,4 +66,4 @@ optional arguments:
   EPOCH : -e EPOCHS, --epochs EPOCHS : Epochs. Default=10
 
   STEPS_PER_EPOCH : -spe, --steps_per_epoch : Steps per epoch. Default=100
-  
+```
